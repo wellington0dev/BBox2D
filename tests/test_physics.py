@@ -6,7 +6,7 @@ Executar a partir da pasta do projeto:
 
 Ou todos os testes:
 
-    python3 -m unittest discover -s tests -v
+    python3 -m unittest discover -s tests -t . -v
 
 Os testes rodam com o display virtual (`SDL_VIDEODRIVER=dummy`), definido
 aqui antes de qualquer import do Pygame, para não exigir uma janela.
@@ -19,11 +19,11 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from src.objects.GameObject import GameObject
-from src.objects.InteractiveObject import InteractiveObject
-from src.physics.Collision import Direction
-from src.physics.PhysicsWorld import PhysicsWorld
-from src.platforms.Platform import Platform
+from bbox2d.objects.GameObject import GameObject
+from bbox2d.objects.InteractiveObject import InteractiveObject
+from bbox2d.physics.Collision import Direction
+from bbox2d.physics.PhysicsWorld import PhysicsWorld
+from bbox2d.platforms.Platform import Platform
 
 #: passo fixo da simulação, em segundos.
 DT = 1 / 60

@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bbox2d"
+version = "0.1.0"
+description = "Motor de jogos 2D sobre Pygame, com física de corpos rígidos, plataformas móveis e transporte de cargas"
+readme = "README.md"
+requires-python = ">=3.10"
+# NENHUMA licença é declarada aqui de propósito. Escolher licença é decisão do
+# dono do projeto, não uma formalidade de empacotamento. Ao chegar a publicar
+# no PyPI, acrescente `license = "MIT"` (PEP 639, exige setuptools>=77) e crie
+# o arquivo LICENSE correspondente.
+keywords = ["pygame", "game", "2d", "engine", "physics", "framework"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
+# Única dependência de runtime. Verificado por varredura de imports em todo o
+# código: além da biblioteca padrão, só aparece `pygame`.
+#
+# A faixa `>=2.1,<3` cobre tudo o projeto usa. As APIs consumidas
+# (`pygame.Vector2`, `pygame.transform.scale`, `pygame.font.get_init`,
+# `pygame.sprite.Group`) existem desde a série 2.0; o piso 2.1 é folga para a
+# correção de regressões conhecidas do Pygame em relação ao SDL.
+dependencies = ["pygame>=2.1,<3"]
+
+[project.urls]
+Repository = "https://github.com/seu-usuario/bbox2d"
+
+[project.optional-dependencies]
+# Somente ferramentas de desenvolvimento. Nada aqui é necessário para rodar
+# o jogo nem a biblioteca.
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[tool.setuptools]
+# Layout src: o pacote não é importável a partir da raiz do repositório por
+# acidente. Só o que o pip constrói — ou o modo editável — o torna visível.
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bbox2d*"]
+
+[tool.setuptools.package-data]
+# Os assets são resolvidos em tempo de execução a partir de `__file__`:
+# `src/bbox2d/ui/Text.py` calcula `parents[1] / "assets"`, que resolve para
+# `src/bbox2d/assets`. Sem esta linha, um `pip install .` (não editável) geraria
+# um pacote sem as fontes nem a imagem do botão, e `Button()` levantaria
+# FileNotFoundError.
+bbox2d = ["assets/*", "assets/font/*"]
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"

@@ -1,0 +1,19 @@
+# Conteúdo do sdist (o que `python -m build` gera).
+#
+# Sem este arquivo, o setuptools usa um default legado que inclui apenas
+# `tests/test*.py`. Isso traz os quatro arquivos de teste mas deixa de fora
+# `tests/__init__.py` — justamente o arquivo que coloca `src/` no `sys.path`
+# para o pacote ser encontrado sem instalação. O sdist chegava ao usuário com
+# uma suíte que não roda.
+include README.md
+
+# A suíte inteira, incluindo o `__init__.py` que a torna executável.
+recursive-include tests *.py
+
+# Os assets entram por `package-data` no pyproject, mas o sdist é montado por
+# um mecanismo diferente; repetir aqui evita depender dessa sobreposição.
+recursive-include src/bbox2d/assets *
+
+# Configuração de CI, para que o sdist reproduza o ambiente em que a extração
+# foi validada.
+include .github/workflows/ci.yml

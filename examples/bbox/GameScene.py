@@ -18,15 +18,15 @@ O Player nunca move o próprio `rect`: ele só declara velocidade.
 
 import pygame
 
-from .Scene import Scene
-from ...objects.Enemy import Enemy
-from ...objects.GameObject import GameObject
-from ...objects.InteractiveObject import InteractiveObject
-from ...objects.Player import Player
-from ...physics.PhysicsWorld import PhysicsWorld
-from ...platforms.Platform import Platform
-from ...ui.Button import Button
-from ...ui.Text import Text
+from bbox2d.core.scenes.Scene import Scene
+from bbox2d.objects.Enemy import Enemy
+from bbox2d.objects.GameObject import GameObject
+from bbox2d.objects.InteractiveObject import InteractiveObject
+from bbox2d.objects.Player import Player
+from bbox2d.physics.PhysicsWorld import PhysicsWorld
+from bbox2d.platforms.Platform import Platform
+from bbox2d.ui.Button import Button
+from bbox2d.ui.Text import Text
 
 MESSAGE = "Setor de teste da fisica"
 BUTTON_LABEL = "Menu"

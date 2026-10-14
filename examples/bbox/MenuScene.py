@@ -6,9 +6,9 @@ acontece quando o botão é clicado: apenas pedir a troca de cena.
 
 import pygame
 
-from .Scene import Scene
-from ...ui.Button import Button
-from ...ui.Text import Text
+from bbox2d.core.scenes.Scene import Scene
+from bbox2d.ui.Button import Button
+from bbox2d.ui.Text import Text
 
 TITLE_TEXT = "BBox"
 BUTTON_LABEL = "Jogar"

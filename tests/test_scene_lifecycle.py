@@ -6,7 +6,7 @@ Executar a partir da pasta do projeto:
 
 Ou todos os testes:
 
-    python3 -m unittest discover -s tests -v
+    python3 -m unittest discover -s tests -t . -v
 
 Os testes rodam com o display virtual (`SDL_VIDEODRIVER=dummy`), definido
 aqui antes de qualquer import do Pygame, para não exigir uma janela.
@@ -36,8 +36,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from src.core.SceneManager import SceneManager
-from src.core.scenes.Scene import Scene
+from bbox2d.core.SceneManager import SceneManager
+from bbox2d.core.scenes.Scene import Scene
 
 #: passo fixo de simulação, em segundos.
 DT = 1 / 60

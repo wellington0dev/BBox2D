@@ -6,7 +6,7 @@ Executar a partir da pasta do projeto:
 
 Ou todos os testes:
 
-    python3 -m unittest discover -s tests -v
+    python3 -m unittest discover -s tests -t . -v
 
 Os testes rodam com o display virtual (`SDL_VIDEODRIVER=dummy`), definido
 aqui antes de qualquer import do Pygame, para não exigir uma janela.
@@ -96,9 +96,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from src.objects.GameObject import GameObject
-from src.physics.PhysicsWorld import PhysicsWorld
-from src.platforms.Platform import Platform
+from bbox2d.objects.GameObject import GameObject
+from bbox2d.physics.PhysicsWorld import PhysicsWorld
+from bbox2d.platforms.Platform import Platform
 
 #: passo fixo da simulação, em segundos.
 DT = 1 / 60
@@ -116,6 +116,32 @@ def simulate(world, seconds):
 def ground_at(world, y=300):
     """Registra um chão horizontal largo na altura `y`."""
     return world.add_platform(Platform((0, y), (640, 20)))
+
+
+#: Raiz do repositório, um nível acima de `tests/`.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+#: Diretório `src/` do layout src, onde o pacote `bbox2d` é construído.
+_SRC_DIR = os.path.join(_PROJECT_ROOT, "src")
+
+#: Onde o pacote `bbox2d` foi resolvido neste interpretador, e se ele veio
+#: de uma instalação ou da árvore de trabalho.
+#:
+#: A pergunta útil NÃO é "import bbox2d funciona?". Por volta deste módulo,
+#: `tests/__init__.py` já pode ter colocado `src/` no `sys.path`, e aí a
+#: resposta seria `sim` mesmo com o pacote desinstalado — que é exatamente o
+#: caso em que este teste precisa repassar `src/` ao subprocesso.
+#:
+#: O que distingue as duas situações é ONDE o pacote foi resolvido:
+#: dentro de `src/` é a árvore de trabalho; fora dela, é a instalação.
+try:  # pragma: no cover - depende do ambiente, não do código testado
+    import bbox2d as _bbox2d
+
+    _BBOX2D_INSTALADO = not os.path.abspath(_bbox2d.__file__).startswith(
+        _SRC_DIR + os.sep
+    )
+except ImportError:  # pragma: no cover
+    _BBOX2D_INSTALADO = False
 
 
 class RecordingLogger:
@@ -622,9 +648,9 @@ class DisplayIndependenceTest(unittest.TestCase):
 
         script = (
             "import pygame\n"
-            "from src.physics.PhysicsWorld import PhysicsWorld\n"
-            "from src.objects.GameObject import GameObject\n"
-            "from src.platforms.Platform import Platform\n"
+            "from bbox2d.physics.PhysicsWorld import PhysicsWorld\n"
+            "from bbox2d.objects.GameObject import GameObject\n"
+            "from bbox2d.platforms.Platform import Platform\n"
             "assert pygame.display.get_surface() is None, 'display aberto'\n"
             "world = PhysicsWorld(bounds=pygame.Rect(0, 0, 640, 480))\n"
             "world.add_platform(Platform((0, 460), (640, 20)))\n"
@@ -638,7 +664,24 @@ class DisplayIndependenceTest(unittest.TestCase):
             "print('OK')\n"
         )
 
-        environment = dict(os.environ, SDL_VIDEODRIVER="dummy")
+        # `PYTHONPATH` entra ANTES de `site-packages` em `sys.path`. Por isso
+        # repassá-lo sempre faria o subprocesso exercitar a árvore de
+        # trabalho mesmo com o pacote instalado — enquanto o resto da suíte
+        # exercita a versão instalada. Os dois estariam testando coisas
+        # diferentes, e o teste de display passaria sem provar nada sobre o
+        # que o consumidor recebe.
+        #
+        # A regra é a mesma de `tests/__init__.py`: só acrescenta `src/` quando
+        # o pacote NÃO está instalado.
+        caminho_extra = "" if _BBOX2D_INSTALADO else _SRC_DIR
+        pythonpath = os.pathsep.join(
+            p for p in (caminho_extra, os.environ.get("PYTHONPATH", "")) if p
+        )
+        environment = dict(
+            os.environ,
+            SDL_VIDEODRIVER="dummy",
+            PYTHONPATH=pythonpath,
+        )
         result = subprocess.run(
             [sys.executable, "-c", script],
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

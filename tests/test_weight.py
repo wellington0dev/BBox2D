@@ -6,7 +6,7 @@ Executar a partir da pasta do projeto:
 
 Ou todos:
 
-    python3 -m unittest discover -s tests -v
+    python3 -m unittest discover -s tests -t . -v
 
 Os testes definem `SDL_VIDEODRIVER=dummy`, então rodam sem abrir janela.
 """
@@ -18,13 +18,13 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from src.objects.GameObject import (
+from bbox2d.objects.GameObject import (
     MIN_WEIGHT,
     GameObject,
 )
-from src.physics import PhysicsWorld as pw_module
-from src.physics.PhysicsWorld import PhysicsWorld
-from src.platforms.Platform import Platform
+from bbox2d.physics import PhysicsWorld as pw_module
+from bbox2d.physics.PhysicsWorld import PhysicsWorld
+from bbox2d.platforms.Platform import Platform
 
 #: passo fixo da simulação, em segundos.
 DT = 1 / 60
