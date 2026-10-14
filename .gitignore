@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------- Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ---------------------------------------------------------------- Ambiente virtual
+.venv/
+venv/
+env/
+ENV/
+
+# ---------------------------------------------------------------- Empacotamento
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------------------------------------------------------------- Logs gerados
+# GameLogger (src/utils/GameLogger.py) grava um .txt por execucao em logs/.
+# Sao artefatos de execucao, nao fonte: nao versionar.
+logs/
+
+# ---------------------------------------------------------------- Caches de ferramentas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------- Editores / SO
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# ---------------------------------------------------------------- NAO IGNORADO (deliberado)
+# src/assets/** e versionado de proposito: button.png, font/upheavtt.ttf,
+# font/Upheaval.fon e font/upheaval.txt sao recursos do jogo.
+# Nao adicionar regras globais tipo *.png, *.ttf ou *.txt aqui.
