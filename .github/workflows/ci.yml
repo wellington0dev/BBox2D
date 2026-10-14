@@ -1,0 +1,157 @@
+# Integração contínua do BBox.
+#
+# Objetivo desta fase (M1): travar o comportamento atual antes da extração do
+# framework. Este workflow não "faz passar" nada — ele executa a suíte e
+# devolve o código de saída real.
+#
+# Estado esperado no momento da criação: a suíte tem DUAS falhas conhecidas,
+# ambas de transporte de pilha em plataforma vertical. O job de testes fica
+# VERMELHO por causa delas, e isso é o resultado correto.
+#
+# Para deixar o job verde é preciso corrigir a Fase M6 (carry da pilha) ou
+# corrigir os dois testes. Nenhuma das duas coisas é feita aqui: esconder a
+# falha com `continue-on-error`, `|| true` no shell ou `set +e` seria trocar
+# um sinal útil por um confortável.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Leitura apenas. O workflow não precisa de permissão de escrita em nada:
+# só lê o repositório e publica o resultado da execução.
+permissions:
+  contents: read
+
+# Sem isto, um novo push no mesmo branch cancelaria a execução anterior.
+# Não afeta o resultado: quem vale é sempre a execução mais recente, e ela
+# reexecuta a suíte inteira do zero.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: suíte completa (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    # fail-fast: false para que uma versão quebrada não esconda o resultado
+    # das outras. Quero a matriz inteira visível.
+    strategy:
+      fail-fast: false
+      matrix:
+        # O projeto é desenvolvido em Python 3.14, que ainda não está
+        # disponível de forma confiável nas imagens do GitHub Actions. Por
+        # isso a matriz cobre 3.11 a 3.13.
+        #
+        # Verificado nesta fase: os 28 arquivos de `src/` e `tests/` são
+        # sintaticamente compatíveis com Python 3.11 (ast.parse com
+        # feature_version=(3,11)), e nenhuma API do pygame usada no projeto
+        # é posterior à série 2.0. Adicionar "3.14" aqui é a forma de dizer
+        # que o interpretador local está coberto — só quando existir.
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Única dependência de terceiros real do projeto. Verificado por
+      # varredura de imports em src/ e tests/: além da biblioteca padrão
+      # (enum, math, os, pathlib, subprocess, sys, time, traceback,
+      # unittest), só aparece `pygame`.
+      - name: Instalar pygame
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pygame>=2.1,<3"
+
+      - name: Mostrar versões
+        run: |
+          python --version
+          python -c "import pygame; print('pygame', pygame.version.ver)"
+
+      # SDL_VIDEODRIVER=dummy: o runner não tem display, e abrir uma janela
+      # em CI é frágil. Isso é o mesmo que os testes já fazem por conta
+      # própria em os.environ.setdefault; aqui fica explícito no CI para que
+      # uma falha de ambiente não pareça uma falha de código.
+      #
+      # `tee` grava a saída num arquivo para o passo de resumo ler depois.
+      # O arquivo vai para o diretório temporário do runner, e não para a raiz
+      # do repositório: assim ele não aparece como "untracked" nem precisa
+      # entrar no .gitignore.
+      #
+      # `exit ${PIPESTATUS[0]}` devolve o código do unittest e NÃO o do tee,
+      # que seria sempre 0 e transformaria toda falha em sucesso. O shell
+      # padrão do GitHub em Linux é bash, onde PIPESTATUS existe.
+      - name: Executar a suíte completa
+        id: suite
+        env:
+          SDL_VIDEODRIVER: dummy
+        run: |
+          python -m unittest discover -s tests -v 2>&1 | tee "${{ runner.temp }}/suite.log"
+          exit ${PIPESTATUS[0]}
+
+      # Passo ADICIONAL e transparente, que nunca substitui a execução
+      # completa acima. Roda mesmo com a falha (if: always()), porque o que
+      # ele informa é outra coisa: se o resto da suíte continua saudável.
+      #
+      # `tests.test_weight` tem 62 testes e passa inteiro (verificado
+      # localmente). Se ele quebrar depois, o problema é novo e não é o carry.
+      #
+      # Importante: isto NÃO deixa o job verde. Um passo que falhou continua
+      # fazendo o job falhar, mesmo com if: always() nos passos seguintes.
+      - name: Subconjunto de pesos (informativo, não substitui a suíte)
+        if: always()
+        env:
+          SDL_VIDEODRIVER: dummy
+        run: python -m unittest tests.test_weight -v
+
+      # Diagnóstico puro: escreve no resumo da execução o que REALMENTE
+      # aconteceu, lido de suite.log. Não decide nada e não influencia o
+      # código de saída.
+      #
+      # Importante: este passo não anuncia uma expectativa como se fosse
+      # resultado. Se o log não existir — porque a suíte nem chegou a rodar,
+      # por falha de instalação ou de configuração — ele diz exatamente isso,
+      # em vez de afirmar as duas falhas conhecidas que não foram observadas.
+      - name: Resumo do resultado real
+        if: always()
+        env:
+          SUITE_LOG: ${{ runner.temp }}/suite.log
+        run: |
+          {
+            echo "### Resultado da suíte completa"
+            echo ""
+            if [ ! -f "$SUITE_LOG" ]; then
+              echo "A suíte **não produziu log**: este job falhou antes de"
+              echo "executar os testes (instalação, checkout ou setup)."
+              echo "Isto NÃO é o resultado esperado da Fase M1."
+            else
+              echo "Passo da suíte: \`${{ steps.suite.outcome }}\`"
+              echo ""
+              echo '```'
+              grep -E '^(Ran |OK|FAILED)' "$SUITE_LOG" || echo "(sem linha de resumo)"
+              echo '```'
+              echo ""
+              echo "Falhas e erros observados:"
+              echo '```'
+              grep -E '^(FAIL|ERROR):' "$SUITE_LOG" || echo "(nenhum)"
+              echo '```'
+              echo ""
+              echo "Esperado na Fase M1 — exatamente estas duas:"
+              echo ""
+              echo "- \`test_stack_of_objects_is_carried_upwards\`   (tests/test_physics.py:601)"
+              echo "- \`test_object_moving_up_carries_object_above\` (tests/test_physics.py:705)"
+              echo ""
+              echo "Qualquer OUTRA falha é regressão nova e deve ser tratada como"
+              echo "tal. Não mascarar: corrigir a causa ou remover o teste é a"
+              echo "única saída."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
